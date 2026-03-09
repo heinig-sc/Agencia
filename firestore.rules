@@ -1,0 +1,116 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    function isDocOwner() {
+      return isAuthenticated() && request.auth.uid == resource.data.uid;
+    }
+    
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    function isValidTimestamp(ts) {
+      return ts is string; // Simplified for ISO strings
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+    
+    function isValidUserProfile(data) {
+      return data.keys().hasAll(['uid', 'email']) &&
+             data.uid == request.auth.uid &&
+             isValidEmail(data.email) &&
+             (data.displayName is string || !('displayName' in data)) &&
+             (data.brandName is string || !('brandName' in data)) &&
+             (data.brandDescription is string || !('brandDescription' in data)) &&
+             (data.targetAudience is string || !('targetAudience' in data)) &&
+             (data.brandVoice is string || !('brandVoice' in data));
+    }
+
+    function isValidContent(data) {
+      return data.keys().hasAll(['uid', 'title', 'content', 'type']) &&
+             data.uid == request.auth.uid &&
+             data.title is string && data.title.size() > 0 && data.title.size() < 200 &&
+             data.content is string && data.content.size() > 0 &&
+             data.type in ['post', 'ad', 'email', 'blog', 'strategy'] &&
+             (data.clientId is string || !('clientId' in data)) &&
+             (data.scheduledDate is string || !('scheduledDate' in data));
+    }
+
+    function isValidImage(data) {
+      return data.keys().hasAll(['uid', 'prompt', 'imageUrl']) &&
+             data.uid == request.auth.uid &&
+             data.prompt is string && data.prompt.size() > 0 &&
+             data.imageUrl is string && (data.imageUrl.matches("^data:image/.*") || data.imageUrl.matches("^http.*")) &&
+             (data.clientId is string || !('clientId' in data));
+    }
+
+    function isValidVideo(data) {
+      return data.keys().hasAll(['uid', 'prompt', 'videoUrl']) &&
+             data.uid == request.auth.uid &&
+             data.prompt is string && data.prompt.size() > 0 &&
+             data.videoUrl is string && data.videoUrl.matches("^http.*") &&
+             (data.clientId is string || !('clientId' in data));
+    }
+
+    function isValidClient(data) {
+      return data.keys().hasAll(['uid', 'name']) &&
+             data.uid == request.auth.uid &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             (data.description is string && data.description.size() < 1000 || !('description' in data)) &&
+             (data.brandVoice is string && data.brandVoice.size() < 100 || !('brandVoice' in data)) &&
+             (data.targetAudience is string && data.targetAudience.size() < 200 || !('targetAudience' in data)) &&
+             (data.createdAt is string || !('createdAt' in data));
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      allow list: if isOwner(userId);
+      allow create: if isOwner(userId) && isValidUserProfile(request.resource.data);
+      allow update: if isOwner(userId) && isValidUserProfile(request.resource.data);
+    }
+
+    match /clients/{clientId} {
+      allow read: if isAuthenticated() && (resource == null || resource.data.uid == request.auth.uid);
+      allow create: if isAuthenticated() && isValidClient(request.resource.data);
+      allow update: if isAuthenticated() && resource.data.uid == request.auth.uid && isValidClient(request.resource.data);
+      allow delete: if isAuthenticated() && resource.data.uid == request.auth.uid;
+    }
+
+    match /contents/{contentId} {
+      allow read: if isAuthenticated() && (resource == null || resource.data.uid == request.auth.uid);
+      allow create: if isAuthenticated() && isValidContent(request.resource.data);
+      allow update: if isAuthenticated() && resource.data.uid == request.auth.uid && isValidContent(request.resource.data);
+      allow delete: if isAuthenticated() && resource.data.uid == request.auth.uid;
+    }
+
+    match /images/{imageId} {
+      allow read: if isAuthenticated() && (resource == null || resource.data.uid == request.auth.uid);
+      allow create: if isAuthenticated() && isValidImage(request.resource.data);
+      allow delete: if isAuthenticated() && resource.data.uid == request.auth.uid;
+    }
+
+    match /videos/{videoId} {
+      allow read: if isAuthenticated() && (resource == null || resource.data.uid == request.auth.uid);
+      allow create: if isAuthenticated() && isValidVideo(request.resource.data);
+      allow delete: if isAuthenticated() && resource.data.uid == request.auth.uid;
+    }
+  }
+}

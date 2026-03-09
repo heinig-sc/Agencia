@@ -1,0 +1,98 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "User Profile",
+      "description": "Stores user preferences and brand information.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Unique user ID from Firebase Auth." },
+        "displayName": { "type": "string" },
+        "email": { "type": "string" },
+        "brandName": { "type": "string" },
+        "brandDescription": { "type": "string" },
+        "targetAudience": { "type": "string" },
+        "brandVoice": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email"]
+    },
+    "MarketingContent": {
+      "title": "Marketing Content",
+      "description": "Generated text content like social media posts, ads, or emails.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "clientId": { "type": "string", "description": "ID of the client this content belongs to." },
+        "title": { "type": "string" },
+        "type": { "type": "string", "enum": ["post", "ad", "email", "blog", "strategy"] },
+        "prompt": { "type": "string" },
+        "content": { "type": "string" },
+        "scheduledDate": { "type": "string", "format": "date-time", "description": "Optional date for content scheduling." },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "title", "content", "type"]
+    },
+    "MarketingImage": {
+      "title": "Marketing Image",
+      "description": "Generated images for marketing campaigns.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "clientId": { "type": "string" },
+        "prompt": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "prompt", "imageUrl"]
+    },
+    "Client": {
+      "title": "Client",
+      "description": "Information about a specific client or project.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "brandVoice": { "type": "string" },
+        "targetAudience": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "name"]
+    },
+    "MarketingVideo": {
+      "title": "Marketing Video",
+      "description": "Generated videos for marketing campaigns.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "clientId": { "type": "string" },
+        "prompt": { "type": "string" },
+        "videoUrl": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "prompt", "videoUrl"]
+    }
+  },
+  "firestore": {
+    "users/{userId}": {
+      "schema": "UserProfile",
+      "description": "User profile and brand settings."
+    },
+    "clients/{clientId}": {
+      "schema": "Client",
+      "description": "Client or project details."
+    },
+    "contents/{contentId}": {
+      "schema": "MarketingContent",
+      "description": "Generated text contents."
+    },
+    "images/{imageId}": {
+      "schema": "MarketingImage",
+      "description": "Generated marketing images."
+    },
+    "videos/{videoId}": {
+      "schema": "MarketingVideo",
+      "description": "Generated marketing videos."
+    }
+  }
+}
