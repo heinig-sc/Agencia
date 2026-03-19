@@ -241,11 +241,13 @@ export default function App() {
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [generatedSvg, setGeneratedSvg] = useState<string | null>(null);
+  const [imageError, setImageError] = useState<string | null>(null);
 
   const [videoPrompt, setVideoPrompt] = useState('');
   const [selectedVideoClientId, setSelectedVideoClientId] = useState<string>('');
   const [isGeneratingVideo, setIsGeneratingVideo] = useState(false);
   const [generatedVideo, setGeneratedVideo] = useState<{ url: string; uri: string } | null>(null);
+  const [videoError, setVideoError] = useState<string | null>(null);
   const [videos, setVideos] = useState<MarketingVideo[]>([]);
 
   // New Client State
@@ -386,6 +388,7 @@ export default function App() {
   const handleGenerateImage = async () => {
     if (!imagePrompt) return;
     setIsGeneratingImage(true);
+    setImageError(null);
     setGeneratedImage(null);
     setGeneratedSvg(null);
     try {
@@ -395,10 +398,15 @@ export default function App() {
         generateMarketingSVG(imagePrompt)
       ]);
       
-      setGeneratedImage(imageResult);
-      setGeneratedSvg(svgResult);
+      if (!imageResult) {
+        setImageError("Não foi possível gerar a imagem. Tente uma descrição diferente.");
+      } else {
+        setGeneratedImage(imageResult);
+        setGeneratedSvg(svgResult);
+      }
     } catch (error) {
       console.error(error);
+      setImageError("Ocorreu um erro ao gerar a imagem. Verifique sua chave de API e tente novamente.");
     } finally {
       setIsGeneratingImage(false);
     }
@@ -537,15 +545,23 @@ export default function App() {
     }
 
     setIsGeneratingVideo(true);
+    setVideoError(null);
     setGeneratedVideo(null);
     try {
       const result = await generateMarketingVideo(videoPrompt, (process.env as any).API_KEY);
-      setGeneratedVideo(result);
+      if (!result) {
+        setVideoError("Não foi possível gerar o vídeo. Tente novamente.");
+      } else {
+        setGeneratedVideo(result);
+      }
     } catch (e) {
       console.error(e);
       // If requested entity not found, prompt for key again
       if (e instanceof Error && e.message.includes("Requested entity was not found")) {
+        setVideoError("Chave de API não encontrada ou inválida. Por favor, selecione uma chave paga.");
         await (window as any).aistudio.openSelectKey();
+      } else {
+        setVideoError("Ocorreu um erro ao gerar o vídeo. Certifique-se de que você selecionou uma chave de API válida.");
       }
     } finally {
       setIsGeneratingVideo(false);
@@ -1330,6 +1346,12 @@ export default function App() {
                   >
                     <ImageIcon size={20} /> Gerar Imagem com IA
                   </Button>
+
+                  {imageError && (
+                    <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-red-500 text-sm">
+                      {imageError}
+                    </div>
+                  )}
                 </div>
 
                 <div className="space-y-6">
@@ -1421,6 +1443,12 @@ export default function App() {
                   >
                     <Video size={20} /> Gerar Vídeo com IA
                   </Button>
+
+                  {videoError && (
+                    <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-red-500 text-sm">
+                      {videoError}
+                    </div>
+                  )}
                   
                   <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl">
                     <p className="text-xs text-emerald-500 flex items-center gap-2">

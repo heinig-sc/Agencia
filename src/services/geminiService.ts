@@ -104,90 +104,113 @@ export async function generateMarketTrends(
 }
 
 export async function generateMarketingImage(prompt: string) {
-  const response = await ai.models.generateContent({
-    model: 'gemini-2.5-flash-image',
-    contents: {
-      parts: [
-        {
-          text: `Crie uma imagem profissional de marketing digital: ${prompt}. Estilo moderno, limpo, alta qualidade fotográfica ou ilustração 3D premium.`,
-        },
-      ],
-    },
-  });
+  try {
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash-image',
+      contents: {
+        parts: [
+          {
+            text: `Crie uma imagem profissional de marketing digital: ${prompt}. Estilo moderno, limpo, alta qualidade fotográfica ou ilustração 3D premium.`,
+          },
+        ],
+      },
+    });
 
-  for (const part of response.candidates?.[0]?.content?.parts || []) {
-    if (part.inlineData) {
-      return `data:image/png;base64,${part.inlineData.data}`;
+    for (const part of response.candidates?.[0]?.content?.parts || []) {
+      if (part.inlineData) {
+        return `data:image/png;base64,${part.inlineData.data}`;
+      }
     }
+    
+    console.warn("Nenhuma imagem gerada na resposta:", response);
+    return null;
+  } catch (error) {
+    console.error("Erro ao gerar imagem de marketing:", error);
+    throw error;
   }
-  return null;
 }
 
 export async function generateMarketingSVG(prompt: string) {
-  const model = "gemini-3.1-pro-preview";
-  
-  const systemInstruction = `
-    Você é um designer gráfico especializado em criar templates SVG para Canva.
-    Sua tarefa é gerar o código SVG completo para um post de marketing baseado no prompt do usuário.
+  try {
+    const model = "gemini-3.1-pro-preview";
     
-    REGRAS CRÍTICAS:
-    1. O SVG deve ser 1080x1080 (quadrado).
-    2. Use elementos <text> para todo o texto, para que sejam editáveis.
-    3. Use fontes padrão da web (Arial, Helvetica, sans-serif).
-    4. Use cores modernas e vibrantes.
-    5. Inclua formas geométricas (<rect>, <circle>, <path>) para criar um design atraente.
-    6. O design deve ser limpo e profissional.
-    7. Retorne APENAS o código SVG puro, sem explicações ou blocos de código markdown.
-    8. Certifique-se de que o texto esteja bem posicionado e legível.
-    9. Se houver erros de ortografia no prompt, CORRIJA-OS no SVG.
-  `;
+    const systemInstruction = `
+      Você é um designer gráfico especializado em criar templates SVG para Canva.
+      Sua tarefa é gerar o código SVG completo para um post de marketing baseado no prompt do usuário.
+      
+      REGRAS CRÍTICAS:
+      1. O SVG deve ser 1080x1080 (quadrado).
+      2. Use elementos <text> para todo o texto, para que sejam editáveis.
+      3. Use fontes padrão da web (Arial, Helvetica, sans-serif).
+      4. Use cores modernas e vibrantes.
+      5. Inclua formas geométricas (<rect>, <circle>, <path>) para criar um design atraente.
+      6. O design deve ser limpo e profissional.
+      7. Retorne APENAS o código SVG puro, sem explicações ou blocos de código markdown.
+      8. Certifique-se de que o texto esteja bem posicionado e legível.
+      9. Se houver erros de ortografia no prompt, CORRIJA-OS no SVG.
+    `;
 
-  const response = await ai.models.generateContent({
-    model,
-    contents: `Crie um template SVG de marketing para: ${prompt}`,
-    config: {
-      systemInstruction,
-    },
-  });
+    const response = await ai.models.generateContent({
+      model,
+      contents: `Crie um template SVG de marketing para: ${prompt}`,
+      config: {
+        systemInstruction,
+      },
+    });
 
-  return response.text || "";
+    return response.text || "";
+  } catch (error) {
+    console.error("Erro ao gerar SVG de marketing:", error);
+    return ""; // Retorna vazio para não quebrar a geração da imagem principal
+  }
 }
 
 export async function generateMarketingVideo(prompt: string, apiKey?: string) {
-  const videoAi = new GoogleGenAI({ apiKey: apiKey || process.env.GEMINI_API_KEY || "" });
-  
-  let operation = await videoAi.models.generateVideos({
-    model: 'veo-3.1-fast-generate-preview',
-    prompt: `Crie um vídeo de marketing profissional: ${prompt}. Estilo cinematográfico, alta qualidade, cores vibrantes, movimento suave.`,
-    config: {
-      numberOfVideos: 1,
-      resolution: '720p',
-      aspectRatio: '16:9'
+  try {
+    const videoAi = new GoogleGenAI({ apiKey: apiKey || process.env.GEMINI_API_KEY || "" });
+    
+    let operation = await videoAi.models.generateVideos({
+      model: 'veo-3.1-fast-generate-preview',
+      prompt: `Crie um vídeo de marketing profissional: ${prompt}. Estilo cinematográfico, alta qualidade, cores vibrantes, movimento suave.`,
+      config: {
+        numberOfVideos: 1,
+        resolution: '720p',
+        aspectRatio: '16:9'
+      }
+    });
+
+    // Poll for completion
+    while (!operation.done) {
+      await new Promise(resolve => setTimeout(resolve, 10000));
+      operation = await videoAi.operations.getVideosOperation({ operation: operation });
     }
-  });
 
-  // Poll for completion
-  while (!operation.done) {
-    await new Promise(resolve => setTimeout(resolve, 10000));
-    operation = await videoAi.operations.getVideosOperation({ operation: operation });
+    const downloadLink = operation.response?.generatedVideos?.[0]?.video?.uri;
+    if (!downloadLink) {
+      console.warn("Nenhum link de download de vídeo encontrado na resposta:", operation);
+      return null;
+    }
+
+    // To fetch the video, we need the API key
+    const response = await fetch(downloadLink, {
+      method: 'GET',
+      headers: {
+        'x-goog-api-key': apiKey || process.env.GEMINI_API_KEY || "",
+      },
+    });
+
+    if (!response.ok) {
+      console.error("Erro ao baixar o vídeo gerado:", response.statusText);
+      return null;
+    }
+    
+    const blob = await response.blob();
+    return {
+      url: URL.createObjectURL(blob),
+      uri: downloadLink
+    };
+  } catch (error) {
+    console.error("Erro ao gerar vídeo de marketing:", error);
+    throw error;
   }
-
-  const downloadLink = operation.response?.generatedVideos?.[0]?.video?.uri;
-  if (!downloadLink) return null;
-
-  // To fetch the video, we need the API key
-  const response = await fetch(downloadLink, {
-    method: 'GET',
-    headers: {
-      'x-goog-api-key': apiKey || process.env.GEMINI_API_KEY || "",
-    },
-  });
-
-  if (!response.ok) return null;
-  
-  const blob = await response.blob();
-  return {
-    url: URL.createObjectURL(blob),
-    uri: downloadLink
-  };
 }
