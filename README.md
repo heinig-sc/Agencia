@@ -1,20 +1,20 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# Eugência AI - Deploy no Vercel
 
-# Run and deploy your AI Studio app
+Este projeto foi adaptado para rodar no Vercel.
 
-This contains everything you need to run your app locally.
+## Configuração do Firebase
 
-View your app in AI Studio: https://ai.studio/apps/b7f3ec9a-85c4-4af9-83c7-f3dfcd585f3b
+Para que a autenticação e o banco de dados funcionem corretamente:
 
-## Run Locally
+1.  **Domínios Autorizados**: Adicione o seu domínio do Vercel (`*.vercel.app`) no Console do Firebase em **Authentication > Settings > Authorized domains**.
+2.  **Variáveis de Ambiente**: No painel do Vercel, adicione a seguinte variável de ambiente:
+    *   `GEMINI_API_KEY`: Sua chave da API do Gemini.
 
-**Prerequisites:**  Node.js
+## Scripts
 
+*   `npm run build`: Gera a versão de produção na pasta `dist`.
+*   `npm run dev`: Inicia o servidor de desenvolvimento.
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+## Estrutura
+
+O projeto é um SPA (Single Page Application) construído com Vite e React. O arquivo `vercel.json` garante que todas as rotas sejam redirecionadas para o `index.html`, permitindo o funcionamento correto do roteamento no lado do cliente (se adicionado futuramente).

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { FirebaseError } from 'firebase/app';
 import { 
   LayoutDashboard, 
   PenTool, 
@@ -219,6 +220,8 @@ const VideoGalleryItem = ({ video, onDelete, onDownload }: { video: MarketingVid
 
 export default function App() {
   const [user, loadingAuth] = useAuthState(auth);
+  const [authError, setAuthError] = useState<string | null>(null);
+  const [isSigningIn, setIsSigningIn] = useState(false);
   const [activeTab, setActiveTab] = useState('dashboard');
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [contents, setContents] = useState<MarketingContent[]>([]);
@@ -613,6 +616,29 @@ export default function App() {
     }
   };
 
+  const handleSignIn = async () => {
+    setAuthError(null);
+    setIsSigningIn(true);
+    try {
+      await signIn();
+    } catch (error) {
+      if (error instanceof FirebaseError) {
+        if (error.code === 'auth/unauthorized-domain') {
+          setAuthError('Este domínio ainda não está autorizado no Firebase. Adicione o domínio atual em Authentication > Settings > Authorized domains.');
+        } else if (error.code === 'auth/operation-not-allowed') {
+          setAuthError('Login com Google não está habilitado no Firebase. Ative o provedor Google em Authentication > Sign-in method.');
+        } else {
+          setAuthError('Não foi possível entrar com Google agora. Tente novamente.');
+        }
+      } else {
+        setAuthError('Não foi possível entrar com Google agora. Tente novamente.');
+      }
+      console.error('Google sign-in error:', error);
+    } finally {
+      setIsSigningIn(false);
+    }
+  };
+
   if (loadingAuth) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
@@ -650,9 +676,12 @@ export default function App() {
             Aumente sua produtividade e escale seu marketing digital.
           </p>
           
-          <Button onClick={signIn} className="px-10 py-4 text-lg">
+          <Button onClick={handleSignIn} loading={isSigningIn} className="px-10 py-4 text-lg">
             Começar Agora com Google
           </Button>
+          {authError && (
+            <p className="mt-4 text-sm text-red-400 max-w-xl mx-auto">{authError}</p>
+          )}
           
           <div className="mt-16 grid grid-cols-3 gap-8">
             {[
